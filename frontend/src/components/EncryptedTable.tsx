@@ -1,86 +1,66 @@
-import { useEffect, useState } from "react";
-import { Table, TableHead, TableRow, TableCell, TableBody, Paper, TextField, Button } from "@mui/material";
+import { useState } from "react";
+import { Table, TableHead, TableRow, TableCell, TableBody, Paper, Button, TextField } from "@mui/material";
 import { io, Socket } from "socket.io-client";
-import { api } from "../api";
-import CryptoJS from "crypto-js";
 
 const socket: Socket = io("http://localhost:3003");
-const SECRET_KEY = "maquina";
-// Debe ser segura y privada
+
 interface EncryptedLogTableData {
-    id: number;
-    main_id: number;
-    action: string;
-    action_date: string;
+    id: string;
+    main_id: string;
+    encrypted_action: string;
+    encrypted_action_date: string;
 }
 
 const EncryptedTable = () => {
-    const [logs, setLogs] = useState<EncryptedLogTableData[]>([]);
+    const [encryptedLogs, setEncryptedLogs] = useState<EncryptedLogTableData[]>([]);
     const [decryptedLogs, setDecryptedLogs] = useState<EncryptedLogTableData[]>([]);
     const [password, setPassword] = useState("");
+    const [showDecrypted, setShowDecrypted] = useState(false);
 
-    useEffect(() => {
-        api.get("/logs").then((res) => {
-            const encryptedData = res.data.map((log: EncryptedLogTableData) => ({
-                ...log,
-                action: CryptoJS.AES.encrypt(log.action, SECRET_KEY).toString(),
-                action_date: CryptoJS.AES.encrypt(log.action_date, SECRET_KEY).toString(),
-            }));
-            setLogs(encryptedData);
-        });
-
-        const handleUpdate = (update: { logTable: EncryptedLogTableData[] }) => {
-            const encryptedData = update.logTable.map((log) => ({
-                ...log,
-                action: CryptoJS.AES.encrypt(log.action, SECRET_KEY).toString(),
-                action_date: CryptoJS.AES.encrypt(log.action_date, SECRET_KEY).toString(),
-            }));
-            setLogs(encryptedData);
-        };
-
-        socket.on("updateData", handleUpdate);
-
-        return () => {
-            socket.off("updateData", handleUpdate);
-        };
-    }, []);
-
-    const decryptData = () => {
-        if (password !== SECRET_KEY) {
-            alert("Contraseña incorrecta");
-            return;
-        }
-
-        const decryptedData = logs.map((log) => ({
-            ...log,
-            action: CryptoJS.AES.decrypt(log.action, SECRET_KEY).toString(CryptoJS.enc.Utf8),
-            action_date: CryptoJS.AES.decrypt(log.action_date, SECRET_KEY).toString(CryptoJS.enc.Utf8),
-        }));
-        setDecryptedLogs(decryptedData);
+    const handleUpdate = (update: { encryptedLogTable: EncryptedLogTableData[] }) => {
+        setEncryptedLogs(update.encryptedLogTable);
     };
 
-    const encryptData = () => {
-        const encryptedData = decryptedLogs.map((log) => ({
+    const handleDecrypt = () => {
+        // Simulate decryption process
+        const decrypted = encryptedLogs.map(log => ({
             ...log,
-            action: CryptoJS.AES.encrypt(log.action, SECRET_KEY).toString(),
-            action_date: CryptoJS.AES.encrypt(log.action_date, SECRET_KEY).toString(),
+            id: decrypt(log.id, password),
+            main_id: decrypt(log.main_id, password),
+            encrypted_action: decrypt(log.encrypted_action, password),
+            encrypted_action_date: decrypt(log.encrypted_action_date, password)
         }));
-        setLogs(encryptedData);
-        setDecryptedLogs([]);
+        setDecryptedLogs(decrypted);
+        setShowDecrypted(true);
     };
+
+    const handleEncrypt = () => {
+        setShowDecrypted(false);
+    };
+
+    const decrypt = (data: string, password: string) => {
+        // Simulate decryption logic
+        return data; // Replace with actual decryption logic
+    };
+
+    const convertDate = (dateString: string) => {
+        // Convert date string to a valid date format
+        return new Date(dateString.replace(/(\d{2})\/(\d{2})\/(\d{4})/, "$2/$1/$3"));
+    };
+
+    socket.on("updateData", handleUpdate);
 
     return (
         <Paper>
             <h2>Encrypted Log Table</h2>
             <TextField
-                label="Contraseña"
+                label="Password"
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
             />
-            <Button onClick={decryptData}>Desencriptar</Button>
-            <Button onClick={encryptData}>Encriptar</Button>
-
+            <Button onClick={handleDecrypt}>Decrypt</Button>
+            <Button onClick={handleEncrypt}>Encrypt</Button>
             <Table>
                 <TableHead>
                     <TableRow>
@@ -91,12 +71,12 @@ const EncryptedTable = () => {
                     </TableRow>
                 </TableHead>
                 <TableBody>
-                    {(decryptedLogs.length > 0 ? decryptedLogs : logs).map((log) => (
+                    {(showDecrypted ? decryptedLogs : encryptedLogs).map((log) => (
                         <TableRow key={log.id}>
                             <TableCell>{log.id}</TableCell>
                             <TableCell>{log.main_id}</TableCell>
-                            <TableCell>{log.action}</TableCell>
-                            <TableCell>{log.action_date}</TableCell>
+                            <TableCell>{log.encrypted_action}</TableCell>
+                            <TableCell>{log.encrypted_action_date}</TableCell>
                         </TableRow>
                     ))}
                 </TableBody>

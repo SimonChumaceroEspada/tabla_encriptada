@@ -13,7 +13,9 @@ const io = new Server(server, {
 const notifyClients = async () => {
     const data = await pool.query("SELECT * FROM main_table");
     const logs = await pool.query("SELECT * FROM log_table");
-    io.emit("updateData", { mainTable: data.rows, logTable: logs.rows });
+    const encryptedLogs = await pool.query("SELECT * FROM encrypted_logs_table"); // Fetch encrypted logs
+    io.emit("updateData", { mainTable: data.rows, logTable: logs.rows, encryptedLogTable: encryptedLogs.rows });
+
 };
 
 // Conectar clientes al WebSocket

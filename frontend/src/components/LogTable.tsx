@@ -12,14 +12,23 @@ interface LogTableData {
     action_date: string;
 }
 
+interface EncryptedLogTableData {
+    id: number;
+    main_id: number;
+    encrypted_action: string;
+    encrypted_action_date: string;
+}
+
 const LogTable = () => {
     const [logs, setLogs] = useState<LogTableData[]>([]);
+    const [encryptedLogs, setEncryptedLogs] = useState<EncryptedLogTableData[]>([]);
 
     useEffect(() => {
         api.get("/logs").then((res) => setLogs(res.data));
 
-        const handleUpdate = (update: { logTable: LogTableData[] }) => {
+        const handleUpdate = (update: { logTable: LogTableData[], encryptedLogTable: EncryptedLogTableData[] }) => {
             setLogs(update.logTable);
+            setEncryptedLogs(update.encryptedLogTable);
         };
 
         socket.on("updateData", handleUpdate);
@@ -28,6 +37,11 @@ const LogTable = () => {
             socket.off("updateData", handleUpdate);
         };
     }, []);
+
+    const convertDate = (dateString: string) => {
+        const date = new Date(dateString);
+        return date.toLocaleString();
+    };
 
     return (
         <Paper>
@@ -47,7 +61,15 @@ const LogTable = () => {
                             <TableCell>{log.id}</TableCell>
                             <TableCell>{log.main_id}</TableCell>
                             <TableCell>{log.action}</TableCell>
-                            <TableCell>{new Date(log.action_date).toLocaleString()}</TableCell>
+                            <TableCell>{log.action_date}</TableCell>
+                        </TableRow>
+                    ))}
+                    {encryptedLogs.map((log) => (
+                        <TableRow key={log.id}>
+                            <TableCell>{log.id}</TableCell>
+                            <TableCell>{log.main_id}</TableCell>
+                            <TableCell>{log.encrypted_action}</TableCell>
+                            <TableCell>{log.encrypted_action_date}</TableCell>
                         </TableRow>
                     ))}
                 </TableBody>
